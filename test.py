@@ -13,7 +13,7 @@ net_mobile = torch.jit.load("models/mobile_net.ptl")
 
 def run(filename, model, size):
 
-    input_image = Image.open()
+    input_image = Image.open(filename)
     preprocess = transforms.Compose([
         transforms.Resize((size,size)),
         transforms.ToTensor(),
@@ -30,6 +30,6 @@ def run(filename, model, size):
         #prob = log_prob[0, val]
 
 # Compare the models
-filename = ""
+filename = "data/images/val/Abyssinian/Abyssinian_4.jpg"
 run(filename, net_mobile, size=224)
 run(filename, net, size=224)

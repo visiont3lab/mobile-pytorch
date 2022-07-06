@@ -36,7 +36,7 @@ def load_model(pretrained, num_classes):
             if ("bn" not in name):
                 param.requires_grad = False
             
-        net.fc = FinalLayer(net.fc.in_features, num_classes)
+    net.fc = FinalLayer(net.fc.in_features, num_classes)
     
     return net
 
