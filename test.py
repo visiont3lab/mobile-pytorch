@@ -30,6 +30,6 @@ def run(filename, model, size):
         #prob = log_prob[0, val]
 
 # Compare the models
-filename = "data/images/val/Abyssinian/Abyssinian_4.jpg"
+filename = "data/images/val/Bengal/Bengal_123.jpg"
 run(filename, net_mobile, size=224)
 run(filename, net, size=224)
