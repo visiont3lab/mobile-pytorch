@@ -15,32 +15,11 @@ from PIL import Image,ImageDraw, ImageFont
 from torch import optim
 from torch.utils.data import DataLoader,Dataset
 import cv2 
+import pandas as pd
+from sklearn.metrics import confusion_matrix
 
 from model import load_model, classes
-
-
-class ImageDataset(Dataset):
-    def __init__(self, folder_path, classes, transform=None):
-        names = os.listdir(folder_path) 
-        self.filepaths = []
-        self.y = []
-        for c in classes.keys():
-            folder_class = os.path.join(folder_path,c)
-            names = os.listdir(folder_class)
-            f = [os.path.join(folder_path,c,name) for name in names]
-            self.filepaths.extend(f)
-            self.y.extend([classes[c] for i in range(0,len(f))])
-        self.transform = transform
-    def __getitem__(self, index):
-        filepath = self.filepaths[index]
-        y = self.y[index]
-        x = Image.open(filepath).convert("RGB")
-        if self.transform:
-            x = self.transform(x)
-        return x,y
-    def __len__(self):
-        return len(self.filepaths)
-
+from dataset import get_data_loaders
 
 # validation metric classification
 def metrics_func_classification(target, output):
@@ -166,64 +145,12 @@ def train_test(params):
     return model, loss_history, metric_history
         
 
-
-if __name__ == "__main__":
-
-    # Generate Train test folder
-    folder_train_path = os.path.join("data","images","train")
-    folder_test_path = os.path.join("data", "images","val")
-
-
-    # -----------  Read Data
-    class_names =  list(classes.keys())
-    num_classes = len(class_names)
-    size = 224 
-    # -----------  
-
-    # ----------- Count images per classes
-    # Count number of images
-    #train = {}
-    #test = {}
-    #for c in class_names:
-    #    train[c] = len(os.listdir(os.path.join(folder_train_path,c)))
-    #    test[c] = len(os.listdir(os.path.join(folder_test_path,c)))
-    #print("Number of images per class -> Train:", train, "Test:", test)
-    # -----------  
-
-    # ---------- Data loader 
-    size = 224 # AlexNet-SqueezeNet-VGG16-Resent18 (224,224)
-    train_transform = transforms.Compose([
-            transforms.Resize((size,size)),
-            transforms.RandomApply(torch.nn.ModuleList([
-                transforms.RandomAffine(degrees=(1, 10), translate=(0.01, 0.03), scale=(1.1, 1.3))
-                ]),
-            p=0.4,
-            ),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
-    test_transform = transforms.Compose([
-            transforms.Resize((size,size)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ])
-
-    train_ds = ImageDataset(folder_train_path, classes, train_transform)
-    test_ds = ImageDataset(folder_test_path, classes, test_transform)
-
-    train_dl = torch.utils.data.DataLoader(train_ds, batch_size=50, shuffle=True)
-    test_dl = torch.utils.data.DataLoader(train_ds, batch_size=50, shuffle=True)
-    #train_dl = torch.utils.data.DataLoader(train_ds, batch_size=50, shuffle=True)
-    #for x,y in train_dl: 
-    #    batch_grid = torchvision.utils.make_grid(x, nrow=5, padding=5)
-    #    im = transforms.ToPILImage()(batch_grid)
-    #    cv2.imshow("Image", im)
-    #    cv2.waitKey(0)
-    #    break
-    # -----------  
+def train():
+    # -----------  Get data loaders
+    train_dl, test_dl = get_data_loaders()
 
     # -----------  Load Network
-    net = load_model(pretrained=True, num_classes=num_classes)
+    net = load_model(pretrained=True, num_classes=len(classes))
     # -----------
 
     # -----------  Train
@@ -231,22 +158,64 @@ if __name__ == "__main__":
     device = torch.device("cpu")
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
+    print("Running on ", device)
     opt = optim.Adam(net.parameters(), lr=0.0001)
-    train_dl = DataLoader(train_ds, batch_size=20, shuffle=True, num_workers=1)
-    test_dl = DataLoader(test_ds, batch_size=20, shuffle=True, num_workers=1)
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.999)  #  lr = lr * gamma ** last_epoch
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.999)  # lr = lr * gamma ** last_epoch
     params = {
-        "model":                 net,
-        "loss_func":             nn.NLLLoss(reduction="sum"),
-        "metric_func":           metrics_func_classification,
-        "num_epochs":            15,
-        "optimizer":             opt,
-        "lr_scheduler":          lr_scheduler,
-        "train_dl":              train_dl,
-        "test_dl":               test_dl,
-        "device":                device,
-        "continue_training" :    False, # continue training from last save weights
-        "sanity_check":          False, # if true we only do one batch per epoch
-        "path2weigths":          "models/net.pt"
-    } 
+        "model": net,
+        "loss_func": torch.nn.CrossEntropyLoss(reduction="sum"),  # NLLLoss(reduction="sum"),
+        "metric_func": metrics_func_classification,
+        "num_epochs": 30,
+        "optimizer": opt,
+        "lr_scheduler": lr_scheduler,
+        "train_dl": train_dl,
+        "test_dl": test_dl,
+        "device": device,
+        "continue_training": False,  # continue training from last save weights
+        "sanity_check": False,  # if true we only do one batch per epoch
+        "path2weigths": "models/net.pt"
+    }
     model, loss_history, metric_history = train_test(params)
+
+
+def test():
+    # -----------  Get data loaders
+    train_dl, test_dl = get_data_loaders()
+
+    num_classes = len(classes)
+    net = load_model(pretrained=True, num_classes=num_classes)
+    path2weights = f"./models/net.pt"
+    weights = torch.load(path2weights)
+    net.load_state_dict(weights)
+
+    # Setup GPU Device
+    device = torch.device("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+
+    # Send model to device
+    net.to(device)
+
+    # Tell the model layer that we are going to use the model in evaluation  mode!
+    net.eval()
+
+    # Predict Classication
+    cm = np.zeros((num_classes, num_classes))
+    names_pred = ["Pred: " + n for n in classes]
+    with torch.no_grad():
+        for x, y in test_dl:
+            x = x.to(device)
+            out = net.forward(x)
+            out = torch.softmax(out, dim=-1)
+            y_hat = out.argmax(dim=-1, keepdim=True).cpu().numpy().reshape(-1)
+            #print(out.cpu().numpy())
+            # Visualize results
+            cm += confusion_matrix(y, y_hat)
+    print("Confusion Matrix")
+    df = pd.DataFrame(cm, columns=names_pred, index=classes)
+    print(df)
+
+if __name__ == "__main__":
+
+    #train()
+    test()
