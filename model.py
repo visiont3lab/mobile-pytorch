@@ -1,6 +1,9 @@
 import torch 
 import torchvision
 
+# Docs
+# Pretrained Models: https://pytorch.org/vision/stable/models.html
+
 classes = {
     "not_ok": 0,  "ok": 1
 }
@@ -39,11 +42,14 @@ def load_model(pretrained, num_classes):
             x = torch.relu(self.fc1(x))
             x = self.fc2(x)
             #x = torch.log_softmax(x, dim=-1)
+            #x = torch.softmax(x, dim=-1)
             return x
 
     # selected net
     #net = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
-    net = torchvision.models.resnet152(weights=torchvision.models.ResNet152_Weights.DEFAULT)
+    #net = torchvision.models.resnet152(weights=torchvision.models.ResNet152_Weights.DEFAULT)
+    net = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
+    #net = torchvision.models.resnet101(weights=torchvision.models.ResNet101_Weights.DEFAULT)
 
     if pretrained:
         # La batch nomrmalization serve a normalizzare l'output dei neuroni in modo

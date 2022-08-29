@@ -109,6 +109,8 @@ def train_test(params):
     best_model_weights = copy.deepcopy(model.state_dict())
     # --> initialiaze best loss to large value
     best_loss = float("inf")
+    # --> initialiaze best metric to large value
+    best_metric = float("inf")
     # --> main loop
     for epoch in range(num_epochs):
         # --> get learning rate
@@ -132,8 +134,12 @@ def train_test(params):
         metric_history["test"].append(test_metric)
         # --> store best model
         if test_loss < best_loss:
+        #if test_metric < best_metric:
+        #if train_metric < best_metric:
             print("--> model improved! --> saved to %s" %(path2weigths))
             best_loss = test_loss
+            #best_metric = test_metric
+            #best_metric = train_metric
             best_model_weights = copy.deepcopy(model.state_dict())
             # --> store weights into local file
             torch.save(model.state_dict(), path2weigths)
@@ -151,6 +157,12 @@ def train():
 
     # -----------  Load Network
     net = load_model(pretrained=True, num_classes=len(classes))
+    
+    #num_classes = len(classes)
+    #net = load_model(pretrained=True, num_classes=num_classes)
+    #path2weights = f"./models/resnet50.pt"
+    #weights = torch.load(path2weights)
+    #net.load_state_dict(weights)
     # -----------
 
     # -----------  Train
@@ -173,7 +185,7 @@ def train():
         "device": device,
         "continue_training": False,  # continue training from last save weights
         "sanity_check": False,  # if true we only do one batch per epoch
-        "path2weigths": "models/net.pt"
+        "path2weigths": "models/resnet50_crop.pt"
     }
     model, loss_history, metric_history = train_test(params)
 
@@ -184,7 +196,7 @@ def test():
 
     num_classes = len(classes)
     net = load_model(pretrained=True, num_classes=num_classes)
-    path2weights = f"./models/net.pt"
+    path2weights = f"./models/resnet50_crop.pt"
     weights = torch.load(path2weights)
     net.load_state_dict(weights)
 
@@ -217,5 +229,5 @@ def test():
 
 if __name__ == "__main__":
 
-    #train()
-    test()
+    train()
+    #test()

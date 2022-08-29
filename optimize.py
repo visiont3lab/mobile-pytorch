@@ -6,7 +6,7 @@ from model import load_model, classes
 # https://pytorch.org/tutorials/recipes/mobile_interpreter.html
 # https://towardsdatascience.com/deep-learning-on-your-phone-pytorch-lite-interpreter-for-mobile-platforms-ae73d0b17eaa
 
-path_weights = "models/net.pt"
+path_weights = "models/resnet50.pt"
 net = load_model(pretrained=False, num_classes=len(classes))
 weights = torch.load(path_weights)
 net.load_state_dict(weights)

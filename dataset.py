@@ -36,7 +36,8 @@ class ImageDataset(Dataset):
         filepath = self.filepaths[index]
         y = self.y[index]
         x = Image.open(filepath).convert("RGB")
-        x = x.rotate(-90, expand=True)  # TODO issue with image rotation
+        #x = x.rotate(-90, expand=True)  # TODO issue with image rotation
+        #x = x.crop((0,500,3000,2405))
         if self.transform:
             x = self.transform(x)
         return x, y
@@ -46,8 +47,8 @@ class ImageDataset(Dataset):
 
 def get_data_loaders():
     # Generate Train test folder
-    folder_train_path = os.path.join("data", "dataset", "train")
-    folder_test_path = os.path.join("data", "dataset", "test")
+    folder_train_path = os.path.join("data", "dataset-crop", "train")
+    folder_test_path = os.path.join("data", "dataset-crop", "test")
 
     # -----------  Read Data
     class_names = list(classes.keys())
